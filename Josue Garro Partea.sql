@@ -1,8 +1,72 @@
---Josue Garro parte A . Llaves 1 y 2
---Lab 6 
+-- ============================================
+-- CREAR BASE DE DATOS
+-- ============================================
+CREATE DATABASE IF NOT EXISTS lab_hashy;
+USE lab_hashy;
 
---llave 1: fn_cernidor(p_id)
---verifica si un numero es primo 
+-- ============================================
+-- ELIMINAR SI YA EXISTEN (para evitar errores)
+-- ============================================
+-- ============================================
+-- ELIMINAR FUNCIONES (primero)
+-- ============================================
+DROP FUNCTION IF EXISTS fn_purificador;
+DROP FUNCTION IF EXISTS fn_espia_tortuga;
+DROP FUNCTION IF EXISTS fn_reloj_arena;
+DROP FUNCTION IF EXISTS fn_cernidor;
+
+-- ============================================
+-- ELIMINAR TABLAS (después)
+-- ============================================
+DROP TABLE IF EXISTS inventario_pirata;
+DROP TABLE IF EXISTS mercado_negro;
+
+-- ============================================
+-- CREAR TABLAS
+-- ============================================
+
+CREATE TABLE mercado_negro (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    categoria VARCHAR(100) UNIQUE,
+    precio_referencia DECIMAL(10,2),
+    ultima_actualizacion DATE
+);
+
+CREATE TABLE inventario_pirata (
+    id INT PRIMARY KEY,
+    nombre_sucio VARCHAR(255),
+    categoria VARCHAR(100),
+    precio_finca DECIMAL(10,2),
+    prioridad_logica INT,
+    fecha_ingreso DATE,
+    meses_validez INT,
+    FOREIGN KEY (categoria) REFERENCES mercado_negro(categoria)
+);
+
+-- ============================================
+-- INSERTAR DATOS
+-- ============================================
+
+INSERT INTO mercado_negro (categoria, precio_referencia, ultima_actualizacion) VALUES 
+('Caramelos', 15.00, '2026-01-01'),
+('Chocolates', 45.00, '2026-01-01'),
+('Gomitas', 20.00, '2026-01-01');
+
+INSERT INTO inventario_pirata 
+(id, nombre_sucio, categoria, precio_finca, prioridad_logica, fecha_ingreso, meses_validez) 
+VALUES 
+(1, '  cArr-Amelo_Menta  ', 'Caramelos', 12.00, 2, '2026-02-15', 6),
+(2, 'CHoco-late...Amargo', 'Chocolates', 55.00, 3, '2025-10-01', 3),
+(3, ' gomita-O_O-fresa ', 'Gomitas', 18.00, 4, '2026-03-01', 12),
+(4, '---TRUFA_Oscura---', 'Chocolates', 40.00, 5, '2026-01-10', 5),
+(5, 'Caramelo_Salado!!', 'Caramelos', 18.00, 7, '2025-12-01', 2),
+(6, 'Gomita_Osa', 'Gomitas', 25.00, 11, '2026-04-10', 8),
+(7, '  !!Gomita_Mágica??  ', 'Gomitas', 22.00, 13, '2026-04-01', 10);
+
+-- ============================================
+-- FUNCIONES
+-- ============================================
+
 DELIMITER //
 
 CREATE FUNCTION fn_cernidor(p_id INT)
@@ -11,7 +75,7 @@ DETERMINISTIC
 BEGIN
     DECLARE v_es_primo BOOLEAN DEFAULT TRUE;
     DECLARE v_divisor INT DEFAULT 2;
-    DECLARE v_limite INT;
+    DECLARE v_limite INT DEFAULT 0;
 
     IF p_id IS NULL THEN
         SET v_es_primo = FALSE;
@@ -32,9 +96,6 @@ BEGIN
 END //
 
 DELIMITER ;
-
---llave 2: fn_reloj_arena(p_fecha, p_meses)
---verifica si algo vencio o esta fresco 
 
 DELIMITER //
 
@@ -60,6 +121,82 @@ BEGIN
     END IF;
 
     RETURN v_resultado;
+END //
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE FUNCTION fn_espia_tortuga(p_categoria VARCHAR(100), p_precio DECIMAL(10,2))
+RETURNS VARCHAR(20)
+DETERMINISTIC
+BEGIN
+    DECLARE v_precio_ref DECIMAL(10,2);
+    DECLARE v_resultado VARCHAR(20);
+
+    -- Subconsulta segura (con LIMIT)
+    SELECT precio_referencia
+    INTO v_precio_ref
+    FROM mercado_negro
+    WHERE categoria = p_categoria
+    LIMIT 1;
+
+    -- Manejo de NULL
+    IF v_precio_ref IS NULL OR p_precio IS NULL THEN
+        SET v_resultado = 'Desconocido';
+
+    ELSE
+        IF p_precio < v_precio_ref THEN
+            SET v_resultado = 'Barato';
+        ELSEIF p_precio > v_precio_ref THEN
+            SET v_resultado = 'Caro';
+        ELSE
+            SET v_resultado = 'Justo';
+        END IF;
+    END IF;
+
+    RETURN v_resultado;
+END //
+
+DELIMITER ;
+
+DELIMITER //
+
+CREATE FUNCTION fn_purificador(p_nombre VARCHAR(255))
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+    DECLARE v_limpio VARCHAR(255);
+
+    IF p_nombre IS NULL THEN
+        SET v_limpio = NULL;
+    ELSE
+        -- Limpieza base
+        SET v_limpio = TRIM(p_nombre);
+
+        SET v_limpio = REPLACE(v_limpio, '_', ' ');
+        SET v_limpio = REPLACE(v_limpio, '-', ' ');
+        SET v_limpio = REPLACE(v_limpio, '!', '');
+        SET v_limpio = REPLACE(v_limpio, '?', '');
+        SET v_limpio = REPLACE(v_limpio, '.', '');
+
+        -- Quitar dobles espacios (puedes repetir si quieres)
+        SET v_limpio = REPLACE(v_limpio, '  ', ' ');
+        SET v_limpio = TRIM(v_limpio);
+
+        -- Minúsculas
+        SET v_limpio = LOWER(v_limpio);
+
+        -- Capitalizar correctamente
+        IF LENGTH(v_limpio) > 0 THEN
+            SET v_limpio = CONCAT(
+                UPPER(LEFT(v_limpio,1)),
+                SUBSTRING(v_limpio,2)
+            );
+        END IF;
+    END IF;
+
+    RETURN v_limpio;
 END //
 
 DELIMITER ;
